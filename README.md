@@ -1,7 +1,6 @@
 
 ---
 
-```
 # 🔐 E2EE Chat App – Cryptography Project (CNS)
 
 A console-based End-to-End Encrypted (E2EE) chat application built using Python and Flask. This project explores multiple encryption schemes and progressively implements them across three versions of the app.
