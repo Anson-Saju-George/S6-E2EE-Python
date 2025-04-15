@@ -32,7 +32,7 @@ A console-based End-to-End Encrypted (E2EE) chat application built using Python 
 ## 🛠️ Tech Stack
 
 - Python
-- Flask (for V3)
+- Flask
 - cryptography & PyNaCl libraries
 
 ---
