@@ -1,60 +1,87 @@
 
 ---
 
-# 🔐 E2EE Chat App - Version 3
+```markdown
+# 🔐 E2EE Chat App – Cryptography Project (CNS)
 
-This is a console-based End-to-End Encrypted (E2EE) chat application built using **Python** and **Flask**, designed for secure real-time messaging between two parties. It supports **three modern encryption schemes** for secure communication:
-
-- 🛡️ **RSA + AES-GCM**
-- 🔐 **X25519 + ChaCha20-Poly1305**
-- 🔁 **Diffie-Hellman + AES-GCM**
+A console-based End-to-End Encrypted (E2EE) chat application built using Python and Flask. This project explores multiple encryption schemes and progressively implements them across three versions of the app.
 
 ---
 
-## 📦 Features
+## 📁 Project Versions
 
-- Secure key exchange and message encryption
-- Multiple encryption algorithms to choose from
-- Flask-based minimal backend
-- HTML interface with dynamic contact loading
-- Real-time message updates (client-side polling)
-- Python-native crypto implementation using `cryptography` and `nacl`
+### ✅ **Version 1**
+- Basic E2EE Chat
+- Uses **RSA for key exchange** and **AES-GCM** for encryption
+- Functional, stable, and working flawlessly
+
+### 🔍 **Version 2** (⚡ Recommended for Demonstration)
+- Displays **plaintext and encrypted messages in the terminal**
+- Best suited for understanding how encryption works in real-time
+- Easy to follow and test
+
+### 🚧 **Version 3** (Under Development)
+- Implements multiple encryption schemes:
+  - 🔐 RSA + AES-GCM  
+  - 🔐 X25519 + ChaCha20-Poly1305  
+  - 🔁 Diffie-Hellman + AES-GCM
+- Includes a Flask-based web UI
+- Currently **unstable** but actively being developed
 
 ---
 
-## 🧰 Technologies Used
+## 🛠️ Tech Stack
 
-- **Flask** – for backend server and routing
-- **HTML + JS** – frontend UI for messaging
-- **Cryptography** – for RSA, AES-GCM, DH
-- **PyNaCl** – for X25519 and ChaCha20-Poly1305
-- **JSON** – for local message + key storage
+- Python
+- Flask (for V3)
+- cryptography & PyNaCl libraries
 
 ---
 
-## 🚀 Getting Started
+## 📦 Install Requirements
 
 ```bash
-git clone https://github.com/Anson-Saju-George/E2EE_College_Project.git
-cd E2EE_College_Project/Ver
+pip install flask cryptography pynacl
+```
+
+---
+
+## ▶️ How to Run
+
+Navigate to the version folder:
+
+```bash
+cd Ver
+```
+
+### Run Version 1
+
+```bash
+python Ver1.py
+```
+
+### Run Version 2 (Recommended)
+
+```bash
+python Ver2.py
+```
+
+### Run Version 3 (Experimental Web Version)
+
+```bash
 python Ver3.py
 ```
 
 Then open your browser and go to:  
-👉 `http://127.0.0.1:5000/`
-
----
-
-## 📸 Screenshot
-
-![App Screenshot](screenshot.png) <!-- Add this if you have one -->
+`http://127.0.0.1:5000/`
 
 ---
 
 ## 📚 License
 
-MIT License © 2025 Anson Saju George  
-For educational purposes (CNS course project).
-```
+License © 2025 Anson Saju George  
+Developed as part of the **Cryptography & Network Security (CNS)** course.
 
 ---
+
+```
