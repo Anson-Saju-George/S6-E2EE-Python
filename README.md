@@ -79,7 +79,7 @@ Then open your browser and go to:
 ## 📚 License
 
 License © 2025 Anson Saju George  
-Developed as part of the **Cryptography & Network Security (CNS)** course.
+Developed as part of the **Cryptography & Network Security (CNS)** course  **SEM 6**.
 
 ---
 
