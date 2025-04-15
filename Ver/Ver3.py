@@ -101,77 +101,50 @@ async function registerUser() {
 }
 
 async function sendMsg() {
-    const msg = document.getElementById("message").value;
-    if (!msg || !currentReceiver) return;
+        const msg = document.getElementById("message").value;
+        if (!msg || !currentReceiver) return;
 
-    const encType = document.getElementById("encType").value;
-    let payload = {};
+        const encType = document.getElementById("encType").value;
+        let payload = {};
 
-    if (encType === 'rsa-aes') {
-        const res = await fetch('/get_user/' + currentReceiver);
-        const data = await res.json();
-        if (!data.public_key) return alert("Receiver not registered");
+        if (encType === 'rsa-aes') {
+            const res = await fetch('/get_user/' + currentReceiver);
+            const data = await res.json();
+            if (!data.public_key) return alert("Receiver not registered");
 
-        const pubKeyBytes = Uint8Array.from(atob(data.public_key), c => c.charCodeAt(0));
-        const pubKey = await window.crypto.subtle.importKey("spki", pubKeyBytes, {name: "RSA-OAEP", hash: "SHA-256"}, true, ["encrypt"]);
+            const pubKeyBytes = Uint8Array.from(atob(data.public_key), c => c.charCodeAt(0));
+            const pubKey = await window.crypto.subtle.importKey("spki", pubKeyBytes, {name: "RSA-OAEP", hash: "SHA-256"}, true, ["encrypt"]);
 
-        const aesKey = await window.crypto.subtle.generateKey({name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]);
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const encodedMsg = new TextEncoder().encode(msg);
-        const ciphertext = await window.crypto.subtle.encrypt({name: "AES-GCM", iv: iv}, aesKey, encodedMsg);
-        const rawAes = await window.crypto.subtle.exportKey("raw", aesKey);
-        const encAesKey = await window.crypto.subtle.encrypt({name: "RSA-OAEP"}, pubKey, rawAes);
+            const aesKey = await window.crypto.subtle.generateKey({name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encodedMsg = new TextEncoder().encode(msg);
+            const ciphertext = await window.crypto.subtle.encrypt({name: "AES-GCM", iv: iv}, aesKey, encodedMsg);
+            const rawAes = await window.crypto.subtle.exportKey("raw", aesKey);
+            const encAesKey = await window.crypto.subtle.encrypt({name: "RSA-OAEP"}, pubKey, rawAes);
 
-        payload = {
-            sender: currentUser,
-            receiver: currentReceiver,
-            enc_key: btoa(String.fromCharCode(...new Uint8Array(encAesKey))),
-            ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-            iv: btoa(String.fromCharCode(...iv)),
-            plaintext: msg,
-            algo: 'rsa-aes'
-        };
+            payload = {
+                sender: currentUser,
+                receiver: currentReceiver,
+                enc_key: btoa(String.fromCharCode(...new Uint8Array(encAesKey))),
+                ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+                iv: b64encode(iv).decode(),
+                plaintext: msg,
+                algo: 'rsa-aes'
+            };
+        }
+
+        await fetch('/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        // Clear the input box after sending the message
+        document.getElementById("message").value = "";
+        // Fetch and display the messages after sending
+        fetchMsgs();
     }
 
-    else if (encType === 'x25519') {
-        const res = await fetch('/get_key/' + currentReceiver);
-        const data = await res.json();
-        if (!data.x25519_pub) return alert("Receiver not registered");
-
-        const senderPriv = await nacl.crypto_box_keypair();
-        const receiverPub = nacl.util.decodeBase64(data.x25519_pub);
-        const [encryptedMsg, nonce, pubKeyHex] = x25519_encrypt(msg, senderPriv, receiverPub);
-
-        payload = {
-            sender: currentUser,
-            receiver: currentReceiver,
-            enc_key: pubKeyHex,
-            ciphertext: encryptedMsg,
-            iv: nonce,
-            plaintext: msg,
-            algo: 'x25519'
-        };
-    }
-
-    else if (encType === 'dh') {
-        const res = await fetch('/get_key/' + currentReceiver);
-        const data = await res.json();
-        if (!data.dh_pub) return alert("Receiver not registered");
-
-        const dhKeypair = await generateDHKeypair();
-        const sharedSecret = deriveSharedSecret(dhKeypair.privateKey, data.dh_pub);
-        const [ciphertext, nonce, tag] = dh_encrypt(msg, sharedSecret);
-
-        payload = {
-            sender: currentUser,
-            receiver: currentReceiver,
-            enc_key: btoa(tag),
-            ciphertext: ciphertext,
-            iv: nonce,
-            plaintext: msg,
-            algo: 'dh'
-        };
-    }
 
     await fetch('/send', {
         method: 'POST',
@@ -198,14 +171,7 @@ async function fetchMessages() {
         const isSelf = msg.sender === currentUser;
 
         if (msg.algo === 'rsa-aes') {
-            // Decrypt RSA + AES
-            // (decrypt logic from earlier RSA + AES section)
-        }
-        else if (msg.algo === 'x25519') {
-            plain = x25519_decrypt(msg.ciphertext, msg.iv, msg.enc_key, privates[currentUser]);
-        }
-        else if (msg.algo === 'dh') {
-            plain = dh_decrypt(msg.ciphertext, msg.iv, msg.enc_key, privates[currentUser]);
+            // Handle decryption of RSA + AES
         }
 
         const alignClass = isSelf ? 'bubble-right' : 'bubble-left';
@@ -249,85 +215,32 @@ window.onload = registerUser;
 </html>
 '''
 
-
-# --- X25519 + ChaCha20-Poly1305 ---
-def x25519_encrypt(msg: str, sender_private: PrivateKey, receiver_public: PublicKey):
-    box = Box(sender_private, receiver_public)
-    nonce = get_random_bytes(24)
-    encrypted = box.encrypt(msg.encode(), nonce)
-    return b64encode(encrypted).decode(), b64encode(nonce).decode(), sender_private.public_key.encode().hex()
-
-def x25519_decrypt(enc_msg: str, nonce_b64: str, sender_pub_hex: str, receiver_private: PrivateKey):
-    sender_pub = PublicKey(bytes.fromhex(sender_pub_hex))
-    box = Box(receiver_private, sender_pub)
-    decrypted = box.decrypt(b64decode(enc_msg))
-    return decrypted.decode()
-
-# --- Diffie-Hellman + AES ---
-def generate_dh_keypair(p: int, g: int):
-    private_key = randint(1, p-1)
-    public_key = pow(g, private_key, p)
-    return private_key, public_key
-
-def derive_dh_shared_secret(their_pub: int, my_priv: int, p: int):
-    return pow(their_pub, my_priv, p)
-
-def dh_encrypt(msg: str, shared_secret: int):
-    aes_key = HKDF(shared_secret.to_bytes(32, 'big'), 32, b'', SHA256)
-    cipher = AES.new(aes_key, AES.MODE_GCM)
-    ciphertext, tag = cipher.encrypt_and_digest(msg.encode())
-    return b64encode(ciphertext).decode(), b64encode(cipher.nonce).decode(), b64encode(tag).decode()
-
-def dh_decrypt(enc_msg: str, nonce_b64: str, tag_b64: str, shared_secret: int):
-    aes_key = HKDF(shared_secret.to_bytes(32, 'big'), 32, b'', SHA256)
-    cipher = AES.new(aes_key, AES.MODE_GCM, nonce=b64decode(nonce_b64))
-    decrypted = cipher.decrypt_and_verify(b64decode(enc_msg), b64decode(tag_b64))
-    return decrypted.decode()
-
 @app.route('/')
 def home():
     return render_template_string(HTML_PAGE)
-
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.json
-    username = data['username']
-    algo = data['algo']
-    users[username] = {'algo': algo, 'data': data}
-
-    if algo == "x25519":
-        priv = PrivateKey.generate()
-        privates[username] = priv
-        users[username]['x25519_pub'] = priv.public_key.encode().hex()
-
-    elif algo == "dh":
-        p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1  # Example 2048-bit prime
-        g = 2
-        priv, pub = generate_dh_keypair(p, g)
-        privates[username] = (priv, p, g)
-        users[username]['dh_pub'] = pub
-
-    return jsonify({"status": "registered", "username": username})
-
-@app.route('/get_user/<username>')
-def get_user(username):
-    return jsonify(users.get(username, {}))
-
-@app.route('/send', methods=['POST'])
-def send():
-    data = request.json
-    messages.append(data)
-    print(f"🔐 {data['sender']} -> {data['receiver']} | algo={data['algo']}")
-    return jsonify({"status": "sent"})
-
-@app.route('/receive/<username>')
-def receive(username):
-    relevant = [m for m in messages if m['sender'] == username or m['receiver'] == username]
-    return jsonify({"messages": relevant})
 
 @app.route('/contacts')
 def contact_list():
     return jsonify({"contacts": list(users.keys())})
 
-if __name__ == "__main__":
+@app.route('/send', methods=['POST'])
+def send_message():
+    data = request.json
+    messages.append(data)  # store the message in memory
+    return jsonify({"status": "message_sent"})
+
+
+@app.route('/receive/<user>', methods=['GET'])
+def receive_message(user):
+    user_msgs = [msg for msg in messages if msg['receiver'] == user]
+    return jsonify({"messages": user_msgs})
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    username = data['username']
+    users[username] = {'public_key': data['public_key'], 'algo': data['algo']}
+    return jsonify({"status": "registered", "username": username})
+
+if __name__ == '__main__':
     app.run(debug=True)
